@@ -18,10 +18,18 @@ Sub Main()
 	m.compositor = CreateObject("roCompositor")
 	m.compositor.SetDrawTo(m.drawMain, 0)
 
+	' Substitute for Pi since Pi is not available in brightscript
+	m.pi = 3.14159265358979323846264338327950
+
+	' ***End Section - Initialize Global Variables***
+
 	' Create the circle bitmap
 	bm_circle = CreateObject("roBitmap", "pkg:/sprites/circle.png")
+
+	' Create array to hold scaled bitmaps
 	bm_circle_array = []
 
+	' Create array to hold sprites
 	spr_circle = []
 
 	For a = 0 To 19
@@ -56,8 +64,6 @@ Sub Main()
 		End If
 	End For
 
-	' Substitute for Pi since Pi is not available in brightscript
-	m.pi = 3.14159265358979323846264338327950
 
 	While True
 
