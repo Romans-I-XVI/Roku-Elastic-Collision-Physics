@@ -1,5 +1,5 @@
 Library "v30/bslDefender.brs"
-Sub Main()
+Sub RunScreenSaver()
 	' ***Start Section - Initialize Global Variables***
 	deviceInfo = CreateObject("roDeviceInfo")
 	display_type = deviceInfo.GetDisplayType()
@@ -125,7 +125,29 @@ Sub Main()
 
 			' If the sprite wasn't already colliding, check to see if there is a collision and handle the collision with ManageBounce()
 			If multiple_collided_sprites <> Invalid
+				multi_collision = False
+				If multiple_collided_sprites.Count() > 1
+					multi_collision = True
+				End If
 				For Each collided_sprite in multiple_collided_sprites
+					If multi_collision
+						print "-------------------------------"
+						print "multi collision"
+						collided_sprite_check_multiple_collisions = collided_sprite.CheckMultipleCollisions() 
+						If collided_sprite_check_multiple_collisions <> Invalid 
+							If collided_sprite_check_multiple_collisions.Count() = 1
+								print "removing other balls collision with this ball from it's array"
+								collided_sprite_data = collided_sprite.GetData()
+								collided_sprite_data.collided_with = []
+								collided_sprite_data.collided = False
+								collided_sprite.SetData(collided_sprite_data)
+							Else
+								print "collided sprite is in multiple collisions itself"
+							End If
+						End If
+						print "-------------------------------"
+
+					End If
 					' If the sprite is not already colliding with anything, handle the bounce.
 					If not sprite.GetData().collided
 						new_data = ManageBounce(sprite, collided_sprite)
