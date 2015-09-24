@@ -1,5 +1,5 @@
 Library "v30/bslDefender.brs"
-Sub RunScreenSaver()
+Sub Main()
 	' ***Start Section - Initialize Global Variables***
 	deviceInfo = CreateObject("roDeviceInfo")
 	display_type = deviceInfo.GetDisplayType()
@@ -40,6 +40,7 @@ Sub RunScreenSaver()
 		' Push the new bitmap to an array
 		bm_circle_array.Push(CreateObject("roBitmap", {width:100, height:100, AlphaEnable:True}))
 		bm_circle_array[a].DrawScaledObject(0, 0, circle_scale, circle_scale, bm_circle)
+
 		' Create a region with appropriate collision circle from the newly created bitmap
 		region_circle = CreateObject("roRegion", bm_circle_array[a], 0, 0, 100 * circle_scale, 100 * circle_scale)
 		region_circle.SetCollisionCircle((100 * circle_scale)/2, (100 * circle_scale)/2, (100 * circle_scale)/2)
@@ -83,95 +84,61 @@ Sub RunScreenSaver()
 			' Move the sprite
 			sprite.MoveTo(data.xpos, data.ypos)
 
-			' Detect collision with wall, use Abs() so the sprite doesn't get lost beyond the wall in infinite reversal of direction
-			If sprite.GetX() < 0 
-				data.xspeed = Abs(data.xspeed)
-			End If
-			If sprite.GetX() > 854 - data.size
-				data.xspeed = Abs(data.xspeed) * -1
-			End If
-			If sprite.GetY() < 0
-				data.yspeed = Abs(data.yspeed)
-			End If
-			If sprite.GetY() > 480 - data.size
-				data.yspeed = Abs(data.yspeed) * -1
-			End If
-
 			' Check if the sprite is colliding with any other sprites
-			multiple_collided_sprites = sprite.CheckMultipleCollisions()
+			collided_sprite = sprite.CheckCollision()
 
 			' If the sprite previously collided, check if it is no longer colliding. If not, set colliding to false.
 			If data.collided
-				If multiple_collided_sprites = Invalid
+				If collided_sprite = Invalid
 					data.collided = False
 					data.collided_with = []
-				Else
-					For i = 0 to data.collided_with.Count()-1
-						still_in_collision = False
-						For Each collided_sprite in multiple_collided_sprites
-							If data.collided_with[i] = collided_sprite.GetData().id
-								still_in_collision = True
-							End If
-						End For
-						If still_in_collision = False
-							data.collided_with.Delete(i)
-						End If
-					End For
+					sprite.SetData(data)
 				End If
 			End If
 
-			' Write the changes back to the sprite
-			sprite.SetData(data)
-
 			' If the sprite wasn't already colliding, check to see if there is a collision and handle the collision with ManageBounce()
-			If multiple_collided_sprites <> Invalid
-				multi_collision = False
-				If multiple_collided_sprites.Count() > 1
-					multi_collision = True
-				End If
-				For Each collided_sprite in multiple_collided_sprites
-					If multi_collision
-						print "-------------------------------"
-						print "multi collision"
-						collided_sprite_check_multiple_collisions = collided_sprite.CheckMultipleCollisions() 
-						If collided_sprite_check_multiple_collisions <> Invalid 
-							If collided_sprite_check_multiple_collisions.Count() = 1
-								print "removing other balls collision with this ball from it's array"
-								collided_sprite_data = collided_sprite.GetData()
-								collided_sprite_data.collided_with = []
-								collided_sprite_data.collided = False
-								collided_sprite.SetData(collided_sprite_data)
-							Else
-								print "collided sprite is in multiple collisions itself"
-							End If
-						End If
-						print "-------------------------------"
+			If collided_sprite <> Invalid
 
-					End If
-					' If the sprite is not already colliding with anything, handle the bounce.
-					If not sprite.GetData().collided
+				' If the sprite is not already colliding with anything, handle the bounce.
+				If not data.collided
+					new_data = ManageBounce(sprite, collided_sprite)
+					sprite.SetData(new_data.data_1)
+					collided_sprite.SetData(new_data.data_2)
+				' If the sprite is already in a collision, check to see if this is a collision with a new sprite that is not already part of the collision. 
+				Else
+					already_in_collision = False
+					For Each collided_id in data.collided_with
+						If collided_id = collided_sprite.GetData().id
+							already_in_collision = True
+							Exit For													
+						End If
+					End For
+					If not already_in_collision
 						new_data = ManageBounce(sprite, collided_sprite)
 						sprite.SetData(new_data.data_1)
 						collided_sprite.SetData(new_data.data_2)
-					' If the sprite is already in a collision, check to see if this is a collision with a new sprite that is not already part of the collision. 
-					Else
-						already_in_collision = False
-						For Each collided_id in sprite.GetData().collided_with
-							If collided_id = collided_sprite.GetData().id
-								already_in_collision = True
-								Exit For													
-							End If
-						End For
-						If not already_in_collision
-							new_data = ManageBounce(sprite, collided_sprite)
-							sprite.SetData(new_data.data_1)
-							collided_sprite.SetData(new_data.data_2)
-
-						End If
+						print "Multi Collision = " ; data.collided_with.Count()
 					End If
-				End For
+				End If
 			End If 
 
+			' Detect collision with wall, use Abs() so the sprite doesn't get lost beyond the wall in infinite reversal of direction
+			If sprite.GetX() < 0 
+				data.xspeed = Abs(data.xspeed)
+				sprite.SetData(data)
+			End If
+			If sprite.GetX() > 854 - data.size
+				data.xspeed = Abs(data.xspeed) * -1
+				sprite.SetData(data)
+			End If
+			If sprite.GetY() < 0
+				data.yspeed = Abs(data.yspeed)
+				sprite.SetData(data)
+			End If
+			If sprite.GetY() > 480 - data.size
+				data.yspeed = Abs(data.yspeed) * -1
+				sprite.SetData(data)
+			End If
 
 		End For
 		' ***** End - Handle Sprite Behavior*****
