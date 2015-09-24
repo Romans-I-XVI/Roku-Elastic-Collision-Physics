@@ -92,9 +92,24 @@ Sub Main()
 				If collided_sprite = Invalid
 					data.collided = False
 					data.collided_with = []
-					sprite.SetData(data)
 				End If
 			End If
+
+			' Detect collision with wall, use Abs() so the sprite doesn't get lost beyond the wall in infinite reversal of direction
+			If sprite.GetX() < 0 
+				data.xspeed = Abs(data.xspeed)
+			End If
+			If sprite.GetX() > 854 - data.size
+				data.xspeed = Abs(data.xspeed) * -1
+			End If
+			If sprite.GetY() < 0
+				data.yspeed = Abs(data.yspeed)
+			End If
+			If sprite.GetY() > 480 - data.size
+				data.yspeed = Abs(data.yspeed) * -1
+			End If
+
+			sprite.SetData(data)
 
 			' If the sprite wasn't already colliding, check to see if there is a collision and handle the collision with ManageBounce()
 			If collided_sprite <> Invalid
@@ -122,23 +137,6 @@ Sub Main()
 				End If
 			End If 
 
-			' Detect collision with wall, use Abs() so the sprite doesn't get lost beyond the wall in infinite reversal of direction
-			If sprite.GetX() < 0 
-				data.xspeed = Abs(data.xspeed)
-				sprite.SetData(data)
-			End If
-			If sprite.GetX() > 854 - data.size
-				data.xspeed = Abs(data.xspeed) * -1
-				sprite.SetData(data)
-			End If
-			If sprite.GetY() < 0
-				data.yspeed = Abs(data.yspeed)
-				sprite.SetData(data)
-			End If
-			If sprite.GetY() > 480 - data.size
-				data.yspeed = Abs(data.yspeed) * -1
-				sprite.SetData(data)
-			End If
 
 		End For
 		' ***** End - Handle Sprite Behavior*****
