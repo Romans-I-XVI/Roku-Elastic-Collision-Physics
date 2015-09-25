@@ -87,6 +87,9 @@ Sub Main()
 			' Check if the sprite is colliding with any other sprites
 			collided_sprite = sprite.CheckCollision()
 
+			' Get multiple collisions for use in AdjustPosition()
+			multiple_collisions = sprite.CheckMultipleCollisions()
+
 			' If the sprite previously collided, check if it is no longer colliding. If not, set colliding to false.
 			If data.collided
 				If collided_sprite = Invalid
@@ -111,6 +114,17 @@ Sub Main()
 
 			sprite.SetData(data)
 
+			' Check if the total distance between this sprite and collided sprites is less than it should be ( i.e. It is inside another sprite)
+			If multiple_collisions <> Invalid
+				For Each collision in multiple_collisions
+					new_data = AdjustPosition(sprite, collision)
+					If new_data <> Invalid
+						sprite.MoveTo(new_data.xpos, new_data.ypos)					
+						sprite.SetData(new_data)	
+					End If
+				End For
+			End If
+
 			' If the sprite wasn't already colliding, check to see if there is a collision and handle the collision with ManageBounce()
 			If collided_sprite <> Invalid
 
@@ -132,7 +146,7 @@ Sub Main()
 						new_data = ManageBounce(sprite, collided_sprite)
 						sprite.SetData(new_data.data_1)
 						collided_sprite.SetData(new_data.data_2)
-						print "Multi Collision = " ; data.collided_with.Count()
+						' print "Multi Collision = " ; data.collided_with.Count()
 					End If
 				End If
 			End If 
@@ -155,8 +169,8 @@ Function ManageBounce(ball_1, ball_2)
 	data_2 = ball_2.GetData()
 
 	' Get the x and y distances between the balls.
-	dx = (ball_1.GetX()+(data_1.size/2)) - (ball_2.GetX()+(data_2.size/2))
-	dy = (ball_1.GetY()+(data_1.size/2)) - (ball_2.GetY()+(data_2.size/2))
+	dx = (data_1.xpos+(data_1.size/2)) - (data_2.xpos+(data_2.size/2))
+	dy = (data_1.ypos+(data_1.size/2)) - (data_2.ypos+(data_2.size/2))
 
 	' Get collision angle using atan2 simulation. 
 	If dx > 0
@@ -243,5 +257,75 @@ Function ManageBounce(ball_1, ball_2)
 	new_data = {data_1: data_1, data_2: data_2}
  
 	return new_data
+
+End Function
+
+Function AdjustPosition(ball_1, ball_2)
+
+	' The purpose of this functions is to manage cases where the ball enters into another ball. If the total distances between the two balls is less than it should be
+	' ball_1 is moved to where the original point of collision should have been (if we were in the real world that is).
+
+	' Get the data from each sprite
+	data_1 = ball_1.GetData()
+	data_2 = ball_2.GetData()
+
+	' Get the x and y distances between the balls.
+	dx = (data_1.xpos+(data_1.size/2)) - (data_2.xpos+(data_2.size/2))
+	dy = (data_1.ypos+(data_1.size/2)) - (data_2.ypos+(data_2.size/2))
+
+	' Get the total distance using pythagorean theorem
+	total_distance = Sqr((dx*dx)+(dy*dy))
+
+	' Get collision angle using atan2 simulation. 
+	If dx > 0
+		collision_angle = Atn(dy/dx)
+	Else If dy >= 0 and dx < 0
+		collision_angle = Atn(dy/dx)+m.pi
+	Else If dy < 0 and dx < 0
+		collision_angle = Atn(dy/dx)-m.pi
+	Else If dy > 0 and dx = 0
+		collision_angle = m.pi/2
+	Else If dy < 0 and dx = 0
+		collision_angle = (m.pi/2)*-1
+	Else
+		collision_angle = 0
+	End If
+
+	' Set what the total distance should have been in the real world.
+	new_total_distance = data_1.size/2 + data_2.size/2
+
+	' Adjust x and y distance to reflect new total distance.
+	new_dx = cos(collision_angle)*new_total_distance
+	new_dy = sin(collision_angle)*new_total_distance
+
+	' Update x and y positions
+	new_xpos = (new_dx + (data_2.xpos+(data_2.size/2))) - data_1.size/2
+	new_ypos = (new_dy + (data_2.ypos+(data_2.size/2))) - data_1.size/2
+
+
+	' Uncomment this to get an overview of the variables and the adjustments.
+	' print "old_xpos = " ; data_1.xpos
+	' print "new_xpos = " ; new_xpos
+	' print "old_ypos = " ; data_1.ypos
+	' print "new_ypos = " ; new_ypos
+	' print "dx = " ; dx
+	' print "new_dx = " ; new_dx
+	' print "dy = " ; dy
+	' print "new_dy = " ; new_dy
+	' print "total_distance = " ; total_distance
+	' print "total_distance should be: " ; new_total_distance
+	' print "multiplier = " ; (data_1.size/2 + data_2.size/2)/total_distance
+	' print "-------------------------------"
+	
+	' If the total distance between the balls is less than it should have been, return the new data so it can be added to the sprite.
+	If total_distance < new_total_distance
+		data_1.xpos = new_xpos
+		data_1.ypos = new_ypos
+		return data_1
+	Else
+		return Invalid
+	End If
+
+
 
 End Function
