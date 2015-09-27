@@ -20,6 +20,7 @@ Sub Main()
 
 	' Substitute for Pi since Pi is not available in brightscript
 	m.pi = 3.14159265358979323846264338327950
+	m.friction = 0.9
 
 	' ***End Section - Initialize Global Variables***
 
@@ -32,10 +33,10 @@ Sub Main()
 	' Create array to hold sprites
 	spr_circle = []
 
-	For a = 0 To 19
+	For a = 0 To 20
 
 		' Set a random scale for the circle, also acts as the circle's mass
-		circle_scale = (rnd(10))/10
+		circle_scale = 0.5
 
 		' Push the new bitmap to an array
 		bm_circle_array.Push(CreateObject("roBitmap", {width:100, height:100, AlphaEnable:True}))
@@ -48,7 +49,7 @@ Sub Main()
 
 		' Push the new region into a sprite in the array of circle sprites.
 		spr_circle.Push(m.compositor.NewSprite(rnd(854-106), rnd(480-106), region_circle, 1))
-		spr_circle[a].SetData({xspeed: rnd(11)-6, yspeed: rnd(11)-6, xpos: spr_circle[a].GetX(), ypos: spr_circle[a].GetY(), mass: 100 * circle_scale, size: 100 * circle_scale, collided: False, collided_with: [], id: a})
+		spr_circle[a].SetData({xspeed: 0, yspeed: 0, xpos: spr_circle[a].GetX(), ypos: spr_circle[a].GetY(), mass: 100 * circle_scale, size: 100 * circle_scale, collided: False, collided_with: [], id: a})
 
 		' Check if the circle is being spawned on top of another circle, if so spawn somewhere else.
 		check_initial_collision:
@@ -77,6 +78,38 @@ Sub Main()
 			sprite = spr_circle[a]
 			data = sprite.GetData()
 
+			If data.ypos < 480 - data.size
+				If data.ypos > 475 - data.size and Abs(data.yspeed) < 5
+					data.yspeed = 0
+				Else
+					If sprite.CheckCollision() = Invalid
+						data.yspeed = data.yspeed + 1
+					End If
+				End If
+			End If
+
+			' Detect collision with wall, use Abs() so the sprite doesn't get lost beyond the wall in infinite reversal of direction
+			If data.xpos < 0 
+				data.xpos = 0
+				data.xspeed = Abs(data.xspeed)
+				data.xspeed = data.xspeed * m.friction
+			End If
+			If data.xpos > 854 - data.size
+				data.xpos = 854 - data.size
+				data.xspeed = Abs(data.xspeed) * -1
+				data.xspeed = data.xspeed * m.friction
+			End If
+			If data.ypos < 0
+				data.ypos = 0
+				data.yspeed = Abs(data.yspeed)
+				data.yspeed = data.yspeed * m.friction
+			End If
+			If data.ypos > 480 - data.size
+				data.ypos = 480 - data.size
+				data.yspeed = Abs(data.yspeed) * -1
+				data.yspeed = data.yspeed * m.friction
+			End If
+
 			' Set new positions based on speed
 			data.xpos = data.xpos + data.xspeed
 			data.ypos = data.ypos + data.yspeed
@@ -86,9 +119,10 @@ Sub Main()
 
 			' Check if the sprite is colliding with any other sprites
 			collided_sprite = sprite.CheckCollision()
-
-			' Get multiple collisions for use in AdjustPosition()
-			multiple_collisions = sprite.CheckMultipleCollisions()
+			If collided_sprite <> Invalid
+				data.xspeed = data.xspeed * m.friction
+				data.yspeed = data.yspeed * m.friction
+			End If
 
 			' If the sprite previously collided, check if it is no longer colliding. If not, set colliding to false.
 			If data.collided
@@ -98,21 +132,13 @@ Sub Main()
 				End If
 			End If
 
-			' Detect collision with wall, use Abs() so the sprite doesn't get lost beyond the wall in infinite reversal of direction
-			If sprite.GetX() < 0 
-				data.xspeed = Abs(data.xspeed)
-			End If
-			If sprite.GetX() > 854 - data.size
-				data.xspeed = Abs(data.xspeed) * -1
-			End If
-			If sprite.GetY() < 0
-				data.yspeed = Abs(data.yspeed)
-			End If
-			If sprite.GetY() > 480 - data.size
-				data.yspeed = Abs(data.yspeed) * -1
-			End If
-
 			sprite.SetData(data)
+
+
+
+			' Get multiple collisions for use in AdjustPosition()
+			multiple_collisions = sprite.CheckMultipleCollisions()
+
 
 			' Check if the total distance between this sprite and collided sprites is less than it should be ( i.e. It is inside another sprite)
 			If multiple_collisions <> Invalid
@@ -247,6 +273,21 @@ Function ManageBounce(ball_1, ball_2)
 	data_2.xspeed = cos(collision_angle)*final_xspeed_2+cos(collision_angle+m.pi/2)*final_yspeed_2
 	data_2.yspeed = sin(collision_angle)*final_xspeed_2+sin(collision_angle+m.pi/2)*final_yspeed_2
 
+	If Abs(data_1.xspeed) < 0.4
+		data_1.xspeed = 0
+	End If
+	If Abs(data_1.yspeed) < 0.4
+		data_1.yspeed = 0
+	End If
+	If Abs(data_2.xspeed) < 0.4
+		data_2.xspeed = 0
+	End If
+	If Abs(data_2.yspeed) < 0.4
+		data_2.yspeed = 0
+	End If
+
+
+
 	' Set the sprite as having had a collision and with which sprite it had a collision
 	data_1.collided = True
 	data_1.collided_with.Push(data_2.id)
@@ -318,7 +359,7 @@ Function AdjustPosition(ball_1, ball_2)
 	' print "-------------------------------"
 	
 	' If the total distance between the balls is less than it should have been, return the new data so it can be added to the sprite.
-	If total_distance < new_total_distance
+	If total_distance < new_total_distance and data_1.xpos > 0 and data_1.xpos < 854 - data_1.size and data_1.ypos > 0 and data_1.ypos < 480 - data_1.size
 		data_1.xpos = new_xpos
 		data_1.ypos = new_ypos
 		return data_1
